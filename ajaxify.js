@@ -1,440 +1,738 @@
-/**
- * ajaxify.js
- *
- * Ajaxify Plugin
- *
- * Author: Arvind Gupta
- *
- * Copyright © 2013 Arvind Gupta <arvgta@gmail.com>
- * Released under the MIT License <http: www.opensource.org="" licenses="" mit-license.php="">
- *
- */
+/* 
+ * Ajaxify.js 
+ * Ajaxify your site out of the box, instantly.
+ * http://4nf.org/ 
+ * 
+ * Copyright 2014 Arvind Gupta; MIT Licensed 
+ */ 
 
-/**"pP" module - Stands for "Push Plugin" - sub-plugin factory - working draft
- *
- * Now a rather big function
- *
- * Todo: this could be a jQuery plugin itself, additionally accepting an anonymous function, to be the internal "a" function
- * - instead of pure "dna" string
- * Elegant would be the potential to accept both just a dna string and an optional anonymous "a" function for larger plugins
- * Also, I see the potential to avoid pollution of the jQuery namespace this way, but how? 
- * -> presumably introduce an internal prefix?
- */
- 
-var l=0; //Module global debugging level - used in frmB and $.log, therefore, I see no alternative to using it...
-function showArgs(a) { s=''; for(var i=0; i<a.length; i++) s+=(a[i]!=undefined && typeof a[i]!='function' && typeof a[i]!='object' && (!a[i].length || a[i].length <= 100) ? a[i] : typeof a[i]) + ' | '; return s }
-function frmB(b, name) { if(name!='log' && !(b.indexOf('$.log(')+1)) return 'var r=false; l++; $.log(l+" | Name | args | " + showArgs(arguments));' + b + "; l--; return r;"; else return b; }
- 
-function pP(dna) { 
-var bp = '(function ($) { var Name = function(options){ \
-Private this.a = function(args) {aBody;}; }; \
-$.fnn = function(arg0) {var r; var $this = $(this); \
-$.fnn.o = $.fnn.o ? $.fnn.o : new Name(options); \
-r = $.fnn.o.a(args); return $this;}; \
-})(jQuery);',
+ //Intuitively better understandable shorthand for String.indexOf() - String.iO()
+String.prototype.iO = function(s) { return this.toString().indexOf(s) + 1; };
 
-dnas = dna.split(' | '), name = dnas[0], Name = name.substr(0, 1).toUpperCase() + name.substr(1, name.length - 1), Settings, Private, Mode, Mode2, Args, Args0, ABody;
-Private = 'var d = [];';
-for(var i = 1; i < dnas.length; i++) {
-	    var dnap = dnas[i];
-		if(dnap.substr(0, 1) == '{') {
-		    dnap = dnap.substr(2, dnap.length - 3);
-			Settings = 'settings = $.extend({' + dnap + '}, options);';
-			Settings += '\n';
-			var sa = dnap.indexOf(', ') + 1 ? dnap.split(', ') : [dnap]; 
-			for(var j = 0; j < sa.length; j++) { 
-			    var si = sa[j];
-				var sn = si.split(':')[0].replace('"', '').replace('"', ''); 
-				Settings +=  (sn + ' = settings["' + sn + '"];\n');
-			}
-		}
-		
-		else if(dnap.substr(0, 1) == '(') {
-		    var del = dnap.indexOf(')'); 
-		    Args = dnap.substr(1, del - 1);
-            Args = Args.indexOf('$this') + 1 ? Args : (Args ? '$this, ' + Args : '$this');
-            Args0 = Args.replace('$this, ', ''); Args0 = Args == '$this' ? '' : Args0;
-            if(Settings) Args0 += Args0 == '' ? 'options' : ', options';	
-            ABody = dnap.substr(del + 2, dnap.length - del - 2);
-            Mode = ABody.indexOf('$this') + 1;
-            Mode2 = ABody.indexOf('return') + 1 || ABody.indexOf('r=') + 1;
-            if(ABody.indexOf(' : ') + 1) { 
-                 var ABodies = ABody.split(' : ');
-                 var Arg0 = Args0.indexOf(', ') + 1 ? Args0.split(', ')[0] : Args0;
-                 ABody = '';
-                 for(var i = 0; i < ABodies.length - 1; i++) { var tBody = ABodies[i]; 
-                     var tBody1 = ABodies[i + 1]; 
-                     var tNewBody = tBody1.substr(0, tBody1.lastIndexOf(';'));
-                     var sc = tBody.lastIndexOf(';');
-                     tBody = sc + 1 ? tBody.substr(sc + 2, tBody.length - sc - 2) : tBody;
-                     if(tBody.length == 1) {
-                         ABody += 'if('+Arg0+' ==="'+tBody+'") {...}\n';
-                     }
-                     else { 
-                         ABody += 'if(typeof '+Arg0+' ==="'+tBody+'") {...}\n';
-                     }
-                     ABody = ABody.replace('...', frmB(tNewBody, name));
-                 }
-            }
-            else {
-                 ABody = frmB(ABody, name);
-           }
-       }
-		
-       else { 
-            Private += 'var ' + dnap + ';'; 
-       }
-    }
-	
-    if(Settings) { Settings = 'var ' + Settings; Private += Settings; } else bp = bp.replace(/options/g, '');
-    if(Mode) { 
-        bp = bp.replace(/fnn/g, 'fn.'+name);
-        if(Mode2) bp = bp.replace(' return $this', ' return r');
-    } 		
-    else { 
-        bp = bp.replace(/fnn/g, name).replace('var $this = $(this); ', 'var $this = "";').replace(' return $this', ' return r');
-    }
-    
-    bp = bp.replace('aBody', ABody).replace(/name/g, name).replace(/Name/g, Name).replace('Private', Private).replace(/args/g, Args).replace('arg0', Args0);
-   	
-    //alert(bp);
-    try { eval(bp); } catch(e) { alert(e); }
-} 
- 
-/*!
- * hoverIntent r7 // 2013.03.11 // jQuery 1.9.1+
- * http://cherne.net/brian/resources/jquery.hoverIntent.html
- *
- * You may use hoverIntent under the terms of the MIT license.
- * Copyright 2007, 2013 Brian Cherne
- */
+//Minified hoverIntent plugin that satisfies JSHint
+(function(a){a.fn.hoverIntent=function(w,e,b){var j={interval:100,sensitivity:7,timeout:0};if(typeof w==="object"){j=a.extend(j,w);}else{if(a.isFunction(e)){j=a.extend(j,{over:w,out:e,selector:b});}else{j=a.extend(j,{over:w,out:w,selector:e});}}var x,d,v,q;var m=function(c){x=c.pageX;d=c.pageY;};var g=function(c,f){f.hoverIntent_t=clearTimeout(f.hoverIntent_t);if(Math.abs(v-x)+Math.abs(q-d)<j.sensitivity){a(f).off("mousemove.hoverIntent",m);f.hoverIntent_s=1;return j.over.apply(f,[c]);}else{v=x;q=d;f.hoverIntent_t=setTimeout(function(){g(c,f);},j.interval);}};var p=function(f,c){c.hoverIntent_t=clearTimeout(c.hoverIntent_t);c.hoverIntent_s=0;return j.out.apply(c,[f]);};var k=function(c){var h=jQuery.extend({},c);var f=this;if(f.hoverIntent_t){f.hoverIntent_t=clearTimeout(f.hoverIntent_t);}if(c.type=="mouseenter"){v=h.pageX;q=h.pageY;a(f).on("mousemove.hoverIntent",m);if(f.hoverIntent_s!=1){f.hoverIntent_t=setTimeout(function(){g(h,f);},j.interval);}}else{a(f).off("mousemove.hoverIntent",m);if(f.hoverIntent_s==1){f.hoverIntent_t=setTimeout(function(){p(h,f);},j.timeout);}}};return this.on({"mouseenter.hoverIntent":k,"mouseleave.hoverIntent":k},j.selector);};})(jQuery);
 
-(function(e){e.fn.hoverIntent=function(t,n,r){var i={interval:100,sensitivity:7,timeout:0};if(typeof t==="object"){i=e.extend(i,t)}else if(e.isFunction(n)){i=e.extend(i,{over:t,out:n,selector:r})}else{i=e.extend(i,{over:t,out:t,selector:n})}var s,o,u,a;var f=function(e){s=e.pageX;o=e.pageY};var l=function(t,n){n.hoverIntent_t=clearTimeout(n.hoverIntent_t);if(Math.abs(u-s)+Math.abs(a-o)<i.sensitivity){e(n).off("mousemove.hoverIntent",f);n.hoverIntent_s=1;return i.over.apply(n,[t])}else{u=s;a=o;n.hoverIntent_t=setTimeout(function(){l(t,n)},i.interval)}};var c=function(e,t){t.hoverIntent_t=clearTimeout(t.hoverIntent_t);t.hoverIntent_s=0;return i.out.apply(t,[e])};var h=function(t){var n=jQuery.extend({},t);var r=this;if(r.hoverIntent_t){r.hoverIntent_t=clearTimeout(r.hoverIntent_t)}if(t.type=="mouseenter"){u=n.pageX;a=n.pageY;e(r).on("mousemove.hoverIntent",f);if(r.hoverIntent_s!=1){r.hoverIntent_t=setTimeout(function(){l(n,r)},i.interval)}}else{e(r).off("mousemove.hoverIntent",f);if(r.hoverIntent_s==1){r.hoverIntent_t=setTimeout(function(){c(n,r)},i.timeout)}}};return this.on({"mouseenter.hoverIntent":h,"mouseleave.hoverIntent":h},i.selector)}})(jQuery); 
+//Module global variables
+var l=0, pass=0, api=window.history && window.history.pushState && window.history.replaceState;
 
-pP('all | (t, fn) $this.each(function() { t = t.split("*").join("$(this)"); t += ";"; eval(t); })');
-pP('log | con = window.console | { verbosity: 0 } | (m) l < verbosity && con && con.log(m)');
-pP('isHtml | (x) d=x.getResponseHeader("Content-Type"); r=d&&(d.indexOf("text/html")+1||d.indexOf("text/xml")+1)');
-
+//Regexes for escaping fetched HTML of a whole page - best of Balupton's "Ajaxify"
+//Makes it possible to pre-fetch an entire page
 var docType = /<\!DOCTYPE[^>]*>/i;
 var tagso = /<(html|head|body|title|meta|script|link)([\s\>])/gi;
 var tagsc = /<\/(html|head|body|title|meta|script|link)\>/gi;
+
+//Helper strings
 var div12 =  '<div class="ajy-$1"$2';
-pP('replD | (h) r=String(h).replace(docType, "").replace(tagso, div12).replace(tagsc,"</div>")');
-pP('_parseHTML | (h) r=$.trim($.replD(h))');
-pP('pages | (h) string : for(var i=0; i<d.length; i++) if(d[i][0]==h) r=d[i][1]; object : d.push(h);');
-pP('memory | { memoryoff: false } | (h) d=memoryoff; if(!h || d==true) r=null; else if(d==false) r=h; \
-else if(d.indexOf(", ")+1) { d=d.split(", "); for(var i=0, r=h; i<d.length; i++) \
-if(h==d[i]) r=null;} else r=h==d?null:h');
-pP('cache1 | (o, h) ? : r=d; + : d=$.memory(h); d=d?$.pages(d):null; ! : d=h;');
-pP('lDivs | () $this.all("fn(*)", function(s) { s.html($.cache1("?").find("#" + s.attr("id")).html()); });');
-pP('lAjax | (hin, p, post) var xhr = $.ajax({url: hin, type: post?"POST":"GET", data:post?post.data:null, success: function(h) { \
-if(!h || !$.isHtml(xhr)) { location = hin; } $.cache1("!",  $($._parseHTML(h))); $.cache1("?").find(".ignore").remove(); $.pages([hin, $.cache1("?")]); p && p(); } })');
-pP('lPage | (hin, p, post) if(hin.indexOf("#")+1) hin=hin.split("#")[0]; $.cache1("+", post?null:hin); if(!$.cache1("?")) $.lAjax(hin, p, post); else p && p();');
-pP('getPage | (t, p, post) if(!t) r=$.cache1("?"); else if(t.indexOf("/") != -1) $.lPage(t, p, post); else if(t == "+") $.lPage(p);\
-else { if(t.charAt(0) == "#") { $.cache1("?").find(t).html(p); t = "-"; } if(t == "-") r=$this.lDivs(); else r=$.cache1("?").find(".ajy-" + t); }');
-
 var linki = '<link rel="stylesheet" type="text/css" href="*" />', scri='<script type="text/javascript" src="*" />';
-pP('insertScript | ($S, PK) $("head").append((PK=="href"?linki: scri).replace("*", $S))');
 var linkr = 'link[href*="!"]', scrr = 'script[src*="!"]';
-pP('removeScript | ($S, PK) $((PK=="href"?linkr:scrr).replace("!", $S)).remove()');
-pP('findScript  | ($S, $Scripts) if($S) for(var i=0; i<$Scripts.length; i++) if($Scripts[i][0] == $S) { $Scripts[i][1] = 1; r=true; }');
 
-pP('allScripts | (PK, deltas) if(!deltas) { $this.each(function(){ $.insertScript($(this)[0], PK); }); return true; }');
-pP('classAlways | (PK) $this.each(function(){ if($(this).attr("data-class") == "always") { $.insertScript($(this).attr(PK), PK); $(this).remove(); } })');
-pP('sameScripts | (sN, PK) for(var i=0; i<sN.length; i++) if(sN[i][1] == 0) $.insertScript(sN[i][0], PK)');
-pP('newArray | (sN, sO, PK, pass) $this.each(function(){ sN.push([$(this).attr(PK), 0]); if(!pass) sO.push([$(this).attr(PK), 0]); })');
-pP('findCommon | (s, sN) for(var i=0; i<s.length; i++) { s[i][1] = 2; if($.findScript(s[i][0], sN)) s[i][1] = 1}');
-pP('freeOld | (s, PK) for(var i=0; i<s.length; i++) if(s[i][1] == 2 && s[i][0]) $.removeScript(s[i][0], PK)');
-pP('realNew | (s, PK) for(var i=0; i<s.length; i++) if(s[i][1] == 0) $.insertScript(s[i][0], PK)');
+/*global jQuery*/ //Tell JSHint, not to moan about "jQuery" being undefined
 
-var addAll = '$scriptsO = [], $scriptsN = [], pass = 0 | { "deltas": true } | (same) \
-if(!$this.allScripts("PK", deltas)) { if(pass) $this.classAlways("PK");\
-if(same) $.sameScripts($scriptsN, "PK"); else { $scriptsN = []; $this.newArray($scriptsN, $scriptsO, "PK", pass);\
-pass++; $.findCommon($scriptsO, $scriptsN); $.freeOld($scriptsO, "PK"); $.realNew($scriptsN, "PK"); $scriptsO = $scriptsN.slice() } }';
-
-pP('addHrefs | ' + addAll.replace(/PK/g, "href"));
-pP('addSrcs | ' + addAll.replace(/PK/g, "src"));
-
-pP('detScripts | (same, $s) if(!same) { var links = $().getPage("link"), jss = $().getPage("script");\
-$s.c = links.filter(function() { return $(this).attr("rel").indexOf("stylesheet")!=-1; });\
-$s.s = jss.filter(function() { return $(this).attr("src"); });\
-$s.t = jss.filter(function(){ return !($(this).attr("src")); }) };');
-pP('_inline | (txt, s) d = s["inlinehints"]; if(d) { d = d.split(", "); for(var i=0; i<d.length; i++) if(txt.indexOf(d[i])+1) r=true; }');
-pP('addtxts | (s) $this.each(function(){ d = $(this).html(); if(d.indexOf(").ajaxify(")==-1 &&\
-(s["inline"] || $(this).hasClass("ajaxy") || $._inline(d, s))) { try { $.globalEval(d); } catch(e) { alert(e); } } r=true; });');
-pP('addScripts | (same, $s, st) $s.c.addHrefs(same, st); $s.s.addSrcs(same, st); $s.t.addtxts(st);'); 
-pP('scripts | $scripts = $(), pass = 0 | { "deltas": true } | (same) $.detScripts(same, $scripts); if(pass++) $.addScripts(same, $scripts, settings); else \
-{ $scripts.c.addHrefs(same, settings); $scripts.s.addSrcs(same, settings);}');
-
-pP('cPage | { cb: null } | (o) undefined : $.scripts(null, settings); if(cb) cb(); boolean : $.scripts(o, settings); string : ;');
-pP('initPage | (e) $.cPage(e && e.same)');
-pP('initAjaxify | (s) d = window.history && window.history.pushState && window.history.replaceState; \
-if(d && s["pluginon"]) { $.memory(null, s); $.cPage("", s); r=true}');
-
-pP('ajaxify | { selector: "a:not(.no-ajaxy)", requestKey: "pronto", requestDelay: 0, verbosity: 0, deltas: true, inline: false, memoryoff: false, cb: null, pluginon: true } \
-| () $(function () { $.log("Entering ajaxify...", settings); if($.initAjaxify(settings)) { $this.pronto(settings); $(window).on("pronto.render", $.initPage); $().getPage(location.href, $.cPage);}});');
-
-/*
-* Pronto Plugin
-* @author Ben Plum, Arvind Gupta
-* @version 0.6.3
-*
-* Copyright © 2013 Ben Plum: mr@benplum.com, Arvind Gupta: arvgta@gmail.com
-* Released under the MIT License
-*/
- 
-if (jQuery) (function($) {
-
-var $this, $window = $(window),
-currentURL = '',
-requestTimer = null,
-post = null;
-
-// Default Options
-var options = {
-    selector: "a",
-    requestKey: "pronto",
-    requestDelay: 0,
-    forms: true,
-    turbo: true,
-    scrollTop: false
-};
-
-// Private Methods
-
-// Init
-function _init(opts) { 
-     $.extend(options, opts || {});
-     options.$body = $("body");
-     options.$container = $(options.container);
-
-     // Capture current url & state
-     currentURL = window.location.href;
-
-     // Set initial state
-     _saveState();
-
-     // Bind state events
-     $window.on("popstate", _onPop);
-
-     if(options.turbo) $(options.selector).hoverIntent( _prefetch );
-     options.$body.on("click.pronto", options.selector, _click);
-     ajaxify_forms();
-}
-
-function _prefetch(e) {
-     var link = e.currentTarget;
-     if(window.location.protocol !== link.protocol || window.location.host !== link.host) return;
-     $().getPage('+', link.href);
-}
-
-function b(m, n) {
-    if (m.indexOf("?") > 0) {
-        m = m.substring(0, m.indexOf("?"))
-    }
-    
-    return m + "?" + n
-}
-
-function k(m) {
-    var o = m.serialize();
-    var n;
-        n = $("input[name][type=submit]", m);
-
-    if (n.length == 0) { $.log('Nothing found in function k() !');
-        return o
-    }
-    
-    var p = n.attr("name") + "=" + n.val();
-    if (o.length > 0) {
-        o += "&" + p
-    } else {
-        o = p
-    }
-    
-    return o
-}
-
-function ajaxify_forms(s) { 
-if(!options.forms) return;
-
-// capture submit
-$('form').submit(function(q) {
-
-    var f = $(q.target);
-    if (!f.is("form")) {
-        f = f.filter("input[type=submit]").parents("form:first");
-        if (f.length == 0) {
-            return true
-        }
-    }
-    
-    var p = k(f);
-    var q = "get", m = f.attr("method");
-    if (m.length > 0 && m.toLowerCase() == "post") q = "post";
-    
-    var h, a = f.attr("action");
-    if ( a != null && a.length > 0) h = a;
-    else h = currentURL;
-    
-    if (q == "get") h = b(h, p);
-    else { post = {};  post.data = p; }
-    
-    $.log('Action href : ' + h);
-    $window.trigger("pronto.submit", h);
-    _request(h);
-     
-     // prevent submitting again
-     return false;
-});
-}
-
-// Handle link clicks
-function _click(e) {
-     var link = e.currentTarget; post = null;
-
-     // Ignore everything but normal click
-     if ( (e.which > 1 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
-     || (window.location.protocol !== link.protocol || window.location.host !== link.host)
-     ) {
-          return;
-     }
-     
-     // Update state on hash change
-     if (link.hash && link.href.replace(link.hash, '') === window.location.href.replace(location.hash, '') || link.href === window.location.href + '#') {
-        _saveState();
-        return;
-     }
-
-     e.preventDefault();
-     e.stopPropagation();
-
-     if (currentURL == link.href) {
-         _saveState();
-     } else {
-         _request(link.href);
-     } 
-}
-
-// Request new url
-function _request(url) { 
-     // Fire request event
-     $window.trigger("pronto.request");
-
-     var req2 = function(){ 	
-         _render(url, 0, true);
-     };
-
-     $().getPage(url, req2, post);
-}
-
-// Handle back/forward navigation
-function _onPop(e) {
-     var data = e.originalEvent.state;
-
-     // Check if data exists
-     if (data !== null && data.url !== currentURL) {
-         // Fire request event
-         $window.trigger("pronto.request");  
-         var req3 = function(){ 	
-             _render(data.url, data.scroll, false);
-         };
-
-         $().getPage(data.url, req3);
-     }
-}
-
-function _render(url, scrollTop, doPush) {      
-     if (requestTimer !== null) {
-          clearTimeout(requestTimer);
-          requestTimer = null;
-     }
-     
-     requestTimer = setTimeout(function() {
-       _doRender(url, scrollTop, doPush)
-     }, options.requestDelay);
-}
-
-function _doPush(url, doPush) {
-     // Update current url
-     currentURL = url;
-
-     // Push new states to the stack on new url
-     if (doPush) {
-          history.pushState(
-               (options.scrollTop ? {
-                    url: currentURL,
-                    scroll: 0
-          } : { url: currentURL}
-        ), "state-"+currentURL, currentURL);
-     } else {
-     
-     // Set state if moving back/forward
-     _saveState();
-     }
-}
-   
-// Render HTML
-function _doRender(url, scrollTop, doPush) { 
-     // Fire load event
-     $window.trigger("pronto.load");
-
-     // Trigger analytics page view
-     _gaCaptureView(url);
-
-     // Update current state
-     _saveState();
-
-     // Update title
-     $('title').html($().getPage('title').html());
-
-     // Update DOM
-     $this.getPage('-');
-     ajaxify_forms();     
-     
-     // Scroll to hash if given
-     if(url.indexOf('#') + 1) { 
-         $('html, body').animate({
-            scrollTop: $( '#' + url.split('#')[1] ).offset().top
-         }, 500);
-     }
-
-     _doPush(url, doPush);
-
-     // Fire render event
-     var event = jQuery.Event("pronto.render");
-     event.same = post ? true : false;
-     $window.trigger(event);
-
-     //Set Scroll position
-     if(options.scrollTop) $window.scrollTop(scrollTop);
-}
-
-// Save current state
-function _saveState() {
-     // Update state
-     if(options.scrollTop) {
-          history.replaceState({
-          url: currentURL,
-          scroll: $window.scrollTop()
-     }, "state-"+currentURL, currentURL);
-     } else {
-          history.replaceState({
-               url: currentURL
-          }, "state-"+currentURL, currentURL);
-     }
-}
-
-// Google Analytics support
-function _gaCaptureView(url) {
-     if (typeof _gaq === "undefined") _gaq = [];
-     _gaq.push(['_trackPageview'], url);
-}
-
-// Define Plugin
-$.fn.pronto = function(opts) {
-     $this = $(this);
-     _init(opts);
-     return $this;
-};
+// The stateful Log plugin - initialised in Ajaxify at the bottom of the file
+// Usage: $.log(<string>); anywhere in Ajaxify where you would like to peek into
+(function ($) { 
+    var Log = function (options) {
+        var con = window.console;
+        var settings = $.extend({
+            verbosity: 0
+        }, options);
+        var verbosity = settings.verbosity;
+        this.a = function (m) {
+            if(l < verbosity && con) con.log(m);
+        };
+    };
+    $.log = function (m, options) {
+        if (!$.log.o) $.log.o = new Log(options);
+        return $.log.o.a(m);
+    };
 })(jQuery);
+
+// The stateful Cache plugin
+// Usage: 
+// 1) $.cache() - returns currently cached page
+// 2) $.cache(<URL>) - returns page with specified URL
+// 3) $.cache(<jQuery object>) - saves the page in cache
+(function ($) {
+    var Cache = function () {
+        var d = false;
+        this.a = function (o) {
+            if (!o) {
+                return d;
+            }
+            if (typeof o === "string") {
+                if(o === "f") { 
+                    $.pages("f");
+                    //d = undefined;
+                    $.log("Cache flushed");
+                } else d = $.pages($.memory(o));
+                
+                return d;
+            }
+            if (typeof o === "object") {
+                d = o;
+                return d;
+            }
+        };
+    };
+    $.cache = function (o) {
+        if (!$.cache.o) $.cache.o = new Cache();
+        return $.cache.o.a(o);
+    };
+})(jQuery);
+
+// The stateful Memory plugin
+// Usage: $.memory(<URL>) - returns the same URL if not turned off internally
+(function ($) {
+    var Memory = function (options) {
+        var d = false;
+        var settings = $.extend({
+            memoryoff: false
+        }, options);
+        var memoryoff = settings.memoryoff;
+        this.a = function (h) {
+            d = memoryoff;
+            if (!h || d === true) return false;
+            if (d === false) return h;
+            if (d.iO(", ")) {
+                d = d.split(", ");
+                if (d.iO(h)) return false;
+				else return h;
+            }
+            return h == d ? false : h;
+        };
+    };
+    $.memory = function (h, options) {
+        if (!$.memory.o) $.memory.o = new Memory(options);
+        return $.memory.o.a(h);
+    };
+})(jQuery);
+
+// The stateful Pages plugin
+// Usage: 
+// 1) $.pages(<URL>) - returns page with specified URL from internal array
+// 2) $.pages(<jQuery object>) - saves the passed page in internal array
+// 3) $.pages(false) - returns false
+(function ($) {
+    var Pages = function () {
+        var d = [];
+        this.a = function (h) {
+            if (typeof h === "string") {
+                if(h === "f") d = [];
+                else for (var i = 0; i < d.length; i++)
+                    if (d[i][0] == h) return d[i][1];
+            }
+            if (typeof h === "object") {
+                d.push(h);
+            }
+            if (typeof h === "boolean") {
+                return false;
+            }
+        };
+    };
+    $.pages = function (h) {
+        if (!$.pages.o) $.pages.o = new Pages();
+        return $.pages.o.a(h);
+    };
+})(jQuery);
+
+// The GetPage plugin
+// First parameter is a switch: 
+// empty - returns cache
+// <URL> - loads HTML via Ajax
+// "+" - pre-fetches page
+// "-" - loads page into DOM and handle scripts
+// otherwise - returns selection of current page to client
+(function ($) {
+    var GetPage = function () {
+        this.a = function (o, p, p2) {
+            if (!o) {
+                return $.cache();
+            }
+            if (o.iO("/")) {
+                return _lPage(o, p, p2);
+            }
+            if (o === "+") {
+                return _lPage(p, p2, false, true);
+            }
+            if (o === "-") {
+                return _lSel(p, p2);
+            }
+            if($.cache()) return $.cache().find(".ajy-" + o);
+        };
+
+        function _lSel(p, $t) { //load page into DOM and handle scripts
+            pass++;
+            _lDivs($t);
+            $.scripts(p);
+            $.scripts("s");
+            $.scripts("a");
+            return $.scripts("c");
+        }
+
+        function _lPage(h, p, post, pre) { //fire Ajax load, check for hash first
+            if (h.iO("#")) h = h.split("#")[0];
+            if (post || !$.cache(h)) return _lAjax(h, p, post, pre);
+            if(p) p();
+        }
+
+        function _ld($t, $h) {
+            $h.find(".ajy-script").each(function(){
+                 if(!($(this).attr("src"))) $(this).replaceWith('<script type="text/javascript">' + $(this).text() + '</script>');
+                 else $(this).replaceWith(scri.replace('*', $(this).attr("src")));
+			});
+            
+			$t.html($h.html());
+        }
+
+		function _lDivs($t) { //load target divs into DOM
+            if ($.cache()) $t.each(function () { 
+                _ld($(this), $.cache().find("#" + $(this).attr("id")));
+            });
+        }
+
+        function _lAjax(hin, p, post, pre) { //execute Ajax load
+            var xhr = $.ajax({
+                url: hin,
+                type: post ? "POST" : "GET",
+                data: post ? post.data : null,
+                success: function (h) {
+                    if (!h || !_isHtml(xhr)) {
+                        if (!pre) location.href = hin;
+                        return;
+                    }
+                    $.cache($(_parseHTML(h)));
+                    $.pages([hin, $.cache()]);
+                    if(p) p();
+                }
+            });
+        }
+
+        function _isHtml(x) { //restrict interesting MIME types - only HTML / XML
+            var d;
+            return (d = x.getResponseHeader("Content-Type")), d && (d.iO("text/html") || d.iO("text/xml"));
+        }
+
+        function _parseHTML(h) { //process fetched HTML
+            return $.trim(_replD(h));
+        }
+
+        function _replD(h) { //pre-process HTML so it can be loaded by jQuery
+            return String(h).replace(docType, "").replace(tagso, div12).replace(tagsc, "</div>");
+        }
+    };
+    $.getPage = function (o, p, p2) {
+        if (!$.getPage.o) $.getPage.o = new GetPage();
+        return $.getPage.o.a(o, p, p2);
+    };
+})(jQuery);
+
+// The main plugin - Ajaxify
+// Is passed the global options 
+// Checks for necessary pre-conditions - otherwise gracefully degrades
+// Initialises sub-plugins
+// Calls Pronto
+(function ($) {
+    var Ajaxify = function (options) {
+        var settings = $.extend({
+            pluginon: true,
+            fn: $.getPage
+        }, options);
+        var pluginon = settings.pluginon;
+        this.a = function ($this) {
+            $(function () {
+                if (_init(settings)) {
+                    $this.pronto(settings);
+                    $.getPage(location.href, $.scripts);
+                }
+            });
+        };
+
+        function _init(s) {
+            if (!api || !pluginon) return false;
+            $.scripts("i", s);
+            $.cache(0, s);
+            $.memory(0, s);
+            return true;
+        }
+    };
+    $.fn.ajaxify = function (options) {
+        var $this = $(this);
+        if (!$.fn.ajaxify.o) $.fn.ajaxify.o = new Ajaxify(options);
+        return $.fn.ajaxify.o.a($this);
+    };
+})(jQuery);
+
+// The stateful Scripts plugin
+// First parameter is switch:
+// "i" - initailise options
+// "a" - handle inline scripts
+// "c" - fetch canonical URL
+// otherwise - delta loading
+(function ($) {
+    var Scripts = function (options) {
+        var $s = $();
+        var settings = $.extend({
+            canonical: true,
+            inline: true,
+            inlinehints: false,
+            style: true
+			}, options);
+        var canonical = settings.canonical,
+            inline = settings.inline,
+            inlinehints = settings.inlinehints,
+            style = settings.style;
+        this.a = function (o) {
+            if (o === "i") {
+                return true;
+            }
+            if (o === "s") {
+                return _allstyle($s.y);
+            }
+			if (o === "a") {
+                return _alltxts($s.t);
+            }
+            if (o === "c") {
+                if (canonical && $s.can) return $s.can.attr("href");
+                else return false;
+            }
+            $.detScripts($s); //fetch all scripts
+            _addScripts(o, $s, settings); //delta-loading
+        };
+
+        function _allstyle($s) {
+            if (!style) return;
+			$("head").find("style").remove();
+			$s.each(function () {
+                var d = $(this).text();
+                _addstyle(d);
+            });
+        }
+		
+		function _alltxts($s) {
+            $s.each(function () {
+                var d = $(this).text();
+                if (!d.iO(").ajaxify(") && (inline || $(this).hasClass("ajaxy") || _inline(d))) _addtext(d);
+            });
+        }
+
+        function _addtext(t) {
+            try {
+                $.globalEval(t);
+            } catch (e) {
+                alert(e);
+            }
+        }
+		
+        function _addstyle(t) {
+			$("head").append('<style type="text/css">' + t + '</style>');
+        }
+
+        function _inline(txt) {
+            var d = inlinehints;
+            if (d) {
+                d = d.split(", ");
+                for (var i = 0; i < d.length; i++)
+                    if (txt.iO(d[i])) return true;
+            }
+        }
+
+        function _addScripts(same, $s, st) {
+            $s.c.addAll(same, "href", st);
+            $s.s.addAll(same, "src", st);
+        }
+    };
+    $.scripts = function (o, options) {
+        if (!$.scripts.o) $.scripts.o = new Scripts(options);
+        return $.scripts.o.a(o);
+    };
+})(jQuery);
+
+// The DetScripts plugin - stands for "detach scripts"
+// Works on "$s" jQuery object that is passed in and fills it
+// Fetches all stylesheets in the head
+// Fetches the canonical URL
+// Fetches all external scripts on the page
+// Fetches all inline scripts on the page
+(function ($) {
+    var DetScripts = function () {
+        var head, lk, j;
+        this.a = function ($s) {
+            head = $.getPage("head");
+            lk = head.find(".ajy-link");
+            j = $.getPage("script");
+            $s.c = _rel(lk, "stylesheet");
+			$s.y = head.find("style");
+            $s.can = _rel(lk, "canonical");
+            $s.s = j.filter(function () {
+                return $(this).attr("src");
+            });
+            $s.t = j.filter(function () {
+                return !($(this).attr("src"));
+            });
+        };
+
+        function _rel(lk, v) {
+            return $(lk).filter(function () {
+                return $(this).attr("rel").iO(v);
+            });
+        }
+    };
+    $.detScripts = function ($s) {
+        if (!$.detScripts.o) $.detScripts.o = new DetScripts();
+        return $.detScripts.o.a($s);
+    };
+})(jQuery);
+
+(function ($) {
+    var AddAll = function (options) {
+        var $scriptsO, $scriptsN, $sCssO = [],
+            $sCssN = [],
+            $sO = [],
+            $sN = [];
+        var settings = $.extend({
+            deltas: true
+        }, options);
+        var deltas = settings.deltas;
+        this.a = function ($this, same, PK) {
+            if (PK == "href") {
+                $scriptsO = $sCssO;
+                $scriptsN = $sCssN;
+            } else {
+                $scriptsO = $sO;
+                $scriptsN = $sN;
+            } if (_allScripts($this, PK)) return true;
+            if (pass) _classAlways($this, PK);
+            if (same) return _sameScripts($scriptsN, PK);
+            $scriptsN = [];
+            _newArray($this, $scriptsN, $scriptsO, PK);
+            if (pass) {
+                _findCommon($scriptsO, $scriptsN);
+                _freeOld($scriptsO, PK);
+                _sameScripts($scriptsN, PK);
+                $scriptsO = $scriptsN.slice();
+            }
+            if (PK == "href") {
+                $sCssO = $scriptsO;
+                $sCssN = $scriptsN;
+            } else {
+                $sO = $scriptsO;
+                $sN = $scriptsN;
+            }
+        };
+
+        function _allScripts($t, PK) {
+            if (deltas) return false;
+            $t.each(function () {
+                _iScript($(this)[0], PK);
+            });
+            return true;
+        }
+
+        function _classAlways($t, PK) {
+            $t.each(function () {
+                if ($(this).attr("data-class") == "always") {
+                    _iScript($(this).attr(PK), PK);
+                    $(this).remove();
+                }
+            });
+        }
+
+        function _sameScripts(s, PK) {
+            for (var i = 0; i < s.length; i++)
+                if (s[i][1] === 0) _iScript(s[i][0], PK);
+        }
+
+        function _iScript($S, PK) {
+            $("head").append((PK == "href" ? linki : scri).replace("*", $S));
+        }
+
+        function _newArray($t, sN, sO, PK) {
+            var d;
+            $t.each(function () {
+                d = [$(this).attr(PK), 0];
+                sN.push(d);
+                if (!pass) sO.push(d);
+            });
+        }
+
+        function _findCommon(s, sN) {
+            for (var i = 0; i < s.length; i++) {
+                s[i][1] = 2;
+                if (_findScript(s[i][0], sN)) s[i][1] = 1;
+            }
+        }
+
+        function _findScript($S, s) {
+            if ($S)
+                for (var i = 0; i < s.length; i++)
+                    if (s[i][0] == $S) {
+                        s[i][1] = 1;
+                        return true;
+                    }
+        }
+
+        function _freeOld(s, PK) {
+            for (var i = 0; i < s.length; i++)
+                if (s[i][1] == 2 && s[i][0]) _removeScript(s[i][0], PK);
+        }
+
+        function _removeScript($S, PK) {
+            $((PK == "href" ? linkr : scrr).replace("!", $S)).remove();
+        }
+    };
+    $.fn.addAll = function (same, PK, options) {
+        var $this = $(this);
+        if (!$.fn.addAll.o) $.fn.addAll.o = new AddAll(options);
+        return $.fn.addAll.o.a($this, same, PK);
+    };
+})(jQuery);
+
+(function ($) {
+    var Pronto = function (options) {
+        var $window = $(window),
+            currentURL = '',
+            requestTimer = null,
+            post = null,
+            $gthis, fm;
+
+        // Default Options
+        var settings = $.extend({
+            selector: "a:not(.no-ajaxy)",
+            requestDelay: 0,
+            forms: true,
+            turbo: true,
+            previewoff: true,
+            fn: false,
+            cb: 0
+        }, options);
+
+        //Shorthands
+        var selector = settings.selector,
+            requestDelay = settings.requestDelay,
+            forms = settings.forms,
+            turbo = settings.turbo,
+            previewoff = settings.previewoff,
+            cb = settings.cb,
+            fn = settings.fn;
+        
+        // Main plugin function
+        this.a = function ($this) {
+            $gthis = $this;
+            _init_p();
+            return $this;
+        };
+
+        // Private Methods
+        function _init_p() {
+            settings.$body = $("body");
+            currentURL = window.location.href; // Capture current url & state
+            _saveState(); // Set initial state
+            $window.on("popstate", _onPop); //Set handler for popState
+            if (turbo) $(selector).hoverIntent(_prefetch, _drain); //If "turbo" option defined then set handler to "_prefetch" on hoverIntent
+            settings.$body.on("click.pronto", selector, _click); //For real clicks set handler to _click()
+            _ajaxify_forms();
+        }
+
+        //Dummy function for hoverIntent
+        function _drain() {}
+
+        //Prefetch target page on hoverIntent
+        function _prefetch(e) {
+            post = null; // Assume not a POST
+            var link = e.currentTarget;
+            
+            //Validate link internal and not the same URL
+            if (_diffHost(link)) return false;
+            if (currentURL == link.href) return false;
+			
+            var req2 = function () {
+                if (previewoff === true) return false;
+                if (!_isInDivs(link) && (previewoff === false || !$(link).closest(previewoff).length)) _click(e, true);
+            };
+            fn('+', link.href, req2);
+        }
+
+        function _isInDivs(link) {
+            var isInDivs = false;
+            $gthis.each(function () {
+                try {
+                    if ($(link).parents("#" + $(this).attr("id")).length > 0) isInDivs = true;
+                } catch (e) {
+                    alert(e);
+                }
+            });
+            return isInDivs;
+        }
+
+        function _b(m, n) {
+            if (m.indexOf("?") > 0) {
+                m = m.substring(0, m.indexOf("?"));
+            }
+            return m + "?" + n;
+        }
+		
+        function _k() {
+            var o = fm.serialize();
+            var n = $("input[name][type=submit]", fm);
+            if (n.length === 0) return o;
+            var p = n.attr("name") + "=" + n.val();
+            if (o.length > 0) {
+                o += "&" + p;
+            } else {
+                o = p;
+            }
+            return o;
+        }
+
+        function _ajaxify_forms() {
+            if (!forms) return false;
+            $('form').submit(function (q) {
+                fm = $(q.target);
+                if (!fm.is("form")) {
+                    fm = fm.filter("input[type=submit]").parents("form:first");
+                    if (fm.length === 0) {
+                        return true;
+                    }
+                }
+                var p = _k();
+                var g = "get",
+                    m = fm.attr("method");
+                if (m.length > 0 && m.toLowerCase() == "post") g = "post";
+                var h, a = fm.attr("action");
+                if (a !== null && a.length > 0) h = a;
+                else h = currentURL; if (g == "get") h = _b(h, p);
+                else {
+                    post = {};
+                    post.data = p;
+                }
+                $window.trigger("pronto.submit", h);
+                _request(h);
+                return false;
+            });
+        }
+
+        // Handle link clicks
+        function _click(e, mode) {
+            var link = e.currentTarget;
+            post = null;
+            if (_exoticKey(e) || _diffHost(link)) return; // Ignore everything but normal click and internal URLs
+            if (_hashChange(link)) { // Only the hash part has changed
+                _saveState(); // Update state on hash change
+                return true;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            if (currentURL == link.href) {
+                _saveState();
+            } else _request(e, mode);
+        }
+
+        // Request new url
+        function _request(e, mode) {
+            var href = typeof(e) !== "string" ? e.currentTarget.href : e;
+            $window.trigger("pronto.request", e); // Fire request event
+             var reqr = function () { //Callback - continue with _render()
+                _render(e, true, mode);
+            };
+            fn(href, reqr, post); //Call "fn" - handler of parent, informing whether POST or not
+        }
+
+        function _render(e, doPush, mode) {
+            if (requestTimer !== null) {
+                clearTimeout(requestTimer);
+                requestTimer = null;
+            }
+            requestTimer = setTimeout(function () {
+                _doRender(e, doPush, mode);
+            }, requestDelay);
+        }
+
+        // Save current state
+        function _saveState() {
+            history.replaceState({ // Update state
+                url: currentURL
+            }, "state-" + currentURL, currentURL);
+        }
+
+        // Handle back/forward navigation
+        function _onPop(e) {
+            var data = e.originalEvent.state;
+            
+            // Check if data exists
+            if (data !== null && data.url !== currentURL) {
+                $window.trigger("pronto.request", e); // Fire request event
+                var req3 = function () { //Callback - continue with _render()
+					_render(e, false, false);
+                };
+                fn(data.url, req3); //Call "fn" - handler of parent, passing URL
+            }
+        }
+
+        // Push new states to the stack on new url
+        function _doPush(url, doPush) {
+            currentURL = url;
+            if (doPush) {
+                history.pushState({
+                    url: currentURL
+                }, "state-" + currentURL, currentURL);
+            } else {
+                _saveState();
+            }
+        }
+
+        // Render HTML
+       function _doRender(e, doPush, mode) {
+            var url, canURL; //Canonical URL
+            url = typeof(e) !== "string" ? e.currentTarget.href || e.originalEvent.state.url : e;
+            $window.trigger("pronto.load", e);  // Fire load event
+            _gaCaptureView(url); // Trigger analytics page view
+            _saveState(); // Update current state
+            $('title').html(fn('title').html()); // Update title
+            
+            // Update DOM and fetch canonical URL - important for handling re-directs
+            canURL = fn('-', post, $gthis); 
+
+            //Set current URL to canonical if no hash or parameters in current URl
+            if (canURL && canURL != url && !url.iO('#') && !url.iO('?')) url = canURL;
+
+            _ajaxify_forms();
+            
+            //If hash in URL animate scroll to it
+            if (url.iO('#') && !mode) {
+                $('html, body').animate({
+                    scrollTop: $('#' + url.split('#')[1]).offset().top
+                }, 500);
+            }
+
+            _doPush(url, doPush); // Push new states to the stack on new url
+			$window.trigger("pronto.render", e); // Fire render event
+            if(cb) cb();
+        }
+
+        // Google Analytics support
+        function _gaCaptureView(url) { 
+            if (typeof window.ga !== 'undefined') window.ga('send', 'pageview', url);
+        }
+
+        function _diffHost(link) {
+            return (window.location.protocol !== link.protocol || window.location.host !== link.host);
+        }
+
+        function _exoticKey(e) {
+            return (e.which > 1 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey);
+        }
+
+        function _hashChange(link) {
+            return (link.hash && link.href.replace(link.hash, '') === window.location.href.replace(location.hash, '') || link.href === window.location.href + '#');
+        }
+    };
+
+    // Define Plugin
+    $.fn.pronto = function (options) {
+        var $this = $(this);
+        if (!$.fn.pronto.o) $.fn.pronto.o = new Pronto(options);
+        return $.fn.pronto.o.a($this);
+    };
+})(jQuery);
+
+jQuery.log("Ajaxify loaded...", {verbosity: 8});

@@ -1,7 +1,7 @@
 {
 "name": "ajaxify",
 "title": "Ajaxify",
-"description": "Ajaxify your site out of the box and instantly",
+"description": "Ajaxify your site out of the box, instantly.",
 "keywords": [
 "ui",
 "animation",
@@ -11,12 +11,13 @@
 "html5",
 "scroll",
 "form",
+"responsive",
 "change",
 "content",
 "performance",
 "speed"
 ],
-"version": "3.6.1",
+"version": "4.7.3",
 "author": {
 "name": "Arvind Gupta",
 "url": "http://4nf.org/more/about/"
@@ -27,12 +28,12 @@
 "url": "http://www.opensource.org/licenses/mit-license.php"
 }
 ],
-"bugs": "https://github.com/arvgta/ajaxify/issues?page=1&state=open",
+"bugs": "https://github.com/arvgta/ajaxify/issues?state=open",
 "homepage": "http://4nf.org/",
 "demo": "http://4nf.org/",
 "docs": "http://4nf.org/ajaxify-overview/",
 "download": "http://4nf.org/ajaxify.min.js",
 "dependencies": {
-"jquery": ">=1.9.1"
+"jquery": ">=1.9.0"
 }
 }
